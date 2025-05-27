@@ -122,5 +122,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+#FORCE_SCRIPT_NAME = '/diario'
+#STATIC_URL = '/diario/static/'
 LOGIN_REDIRECT_URL = '/diario/'
 LOGOUT_REDIRECT_URL = '/diario/'
