@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Auditoria - Diário de Bordo</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 2rem;
+      color: #243642;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 0.8rem;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+
+    th {
+      background-color: #387478;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .back {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      background: #387478;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+
+    .acao {
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .adicao { color: green; }
+    .edicao { color: #e69b00; }
+    .exclusao { color: red; }
+
+    form.filtros {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    form.filtros input,
+    form.filtros select {
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    form.filtros button {
+      background:#387478;
+      color:white;
+      border:none;
+      padding:0.5rem 1rem;
+      border-radius:6px;
+      cursor: pointer;
+    }
+
+    .sem-registros {
+      text-align: center;
+      font-style: italic;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <a href="{% url 'diario' %}" class="back">← Voltar para o Diário</a>
+
+  <h1>Registro de Auditoria</h1>
+
+  <form method="get" class="filtros">
+    <input type="text" name="q" placeholder="Buscar palavra-chave..." value="{{ request.GET.q }}">
+    
+    <select name="acao">
+      <option value="">Todas as ações</option>
+      <option value="adicao" {% if request.GET.acao == 'adicao' %}selected{% endif %}>Adição</option>
+      <option value="edicao" {% if request.GET.acao == 'edicao' %}selected{% endif %}>Edição</option>
+      <option value="exclusao" {% if request.GET.acao == 'exclusao' %}selected{% endif %}>Exclusão</option>
+    </select>
+
+    <select name="usuario">
+      <option value="">Todos os usuários</option>
+      {% for user in usuarios %}
+        <option value="{{ user.id }}" {% if request.GET.usuario == user.id|stringformat:"s" %}selected{% endif %}>
+          {{ user.get_full_name|default:user.username }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <input type="date" name="data" value="{{ request.GET.data }}">
+    
+    <button type="submit">Filtrar</button>
+  </form>
+
+  <table>
+    <tr>
+      <th>Data</th>
+      <th>Ação</th>
+      <th>Título</th>
+      <th>Usuário</th>
+      <th>Detalhes</th>
+    </tr>
+    {% for log in auditorias %}
+    <tr>
+      <td>{{ log.data|date:"d/m/Y H:i" }}</td>
+      <td class="acao {{ log.acao }}">{{ log.get_acao_display }}</td>
+      <td>
+        {% if log.entrada %}
+          {{ log.entrada.titulo }}
+        {% else %}
+          (Entrada removida)
+        {% endif %}
+      </td>
+      <td>
+        {% if log.usuario %}
+          {{ log.usuario.get_full_name|default:log.usuario.username }}
+        {% else %}
+          (Usuário não identificado)
+        {% endif %}
+      </td>
+      <td>{{ log.detalhes }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="sem-registros">Nenhum registro de auditoria encontrado.</td></tr>
+    {% endfor %}
+  </table>
+
+</body>
+</html>

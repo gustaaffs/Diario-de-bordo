@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Diário de Bordo - NOC</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      color: #243642;
+    }
+
+    .topbar {
+      background: #243642;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    .topbar .right {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .search-form input {
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.95rem;
+    }
+
+    .btn-topbar {
+      padding: 0.45rem 0.9rem;
+      background-color: #629584;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 2rem;
+    }
+
+    .button-add {
+      background-color: #387478;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 2rem;
+    }
+
+    .entrada {
+      background-color: #fff;
+      border-left: 5px solid #387478;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      position: relative;
+    }
+
+    .entrada .data {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .entrada .autor {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 0.3rem;
+    }
+
+    .btn-editar {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #ccc;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 8% auto;
+      padding: 2rem;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: #387478;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 600px) {
+      .search-form {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .search-form input,
+      .search-form button,
+      .btn-topbar {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1>Diário de Bordo</h1>
+    <div class="right">
+      <form method="get" class="search-form">
+        <input type="text" name="q" placeholder="Buscar..." value="{{ request.GET.q }}">
+        <input type="date" name="data" value="{{ request.GET.data }}">
+        <button type="submit" class="btn-topbar">Buscar</button>
+      </form>
+
+      {% if user.is_authenticated %}
+        <a href="{% url 'auditoria' %}" class="btn-topbar">Auditoria</a>
+        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-topbar">Sair</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}" class="btn-topbar">Entrar</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="container">
+    {% if user.is_authenticated %}
+      <button class="button-add" onclick="abrirModalCriar()">+ Nova Entrada</button>
+    {% endif %}
+
+    {% for entrada in entradas %}
+      <div class="entrada">
+        {% if user.is_authenticated %}
+          <button class="btn-editar"
+                  onclick="abrirModalEditar({{ entrada.id }}, '{{ entrada.tipo }}', `{{ entrada.titulo|escapejs }}`, `{{ entrada.conteudo|escapejs }}`)">
+            Editar
+          </button>
+        {% endif %}
+        <div class="data">{{ entrada.data_criacao|date:"d/m/Y H:i" }} - {{ entrada.get_tipo_display }}</div>
+        <h3>{{ entrada.titulo }}</h3>
+        <p>{{ entrada.conteudo|linebreaks }}</p>
+        <div class="autor">Escrito por: {{ entrada.autor.get_full_name|default:entrada.autor.username }}</div>
+      </div>
+    {% empty %}
+      <p>Nenhuma entrada encontrada.</p>
+    {% endfor %}
+  </div>
+
+  {% if user.is_authenticated %}
+  <!-- Modal Único -->
+  <div id="modalEntrada" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="fecharModal()">&times;</span>
+      <h2 id="modalTitulo">Nova Entrada</h2>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="modo" id="modo" value="novo">
+        <input type="hidden" name="entrada_id" id="entrada_id">
+
+        <div class="form-group">
+          <select name="tipo" id="tipo" required>
+            <option value="">Selecione o tipo</option>
+            <option value="incidente">Incidente Zabbix</option>
+            <option value="ronda">Ronda</option>
+            <option value="nota">Nota Importante</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <input type="text" name="titulo" id="titulo" placeholder="Título" required>
+        </div>
+
+        <div class="form-group">
+          <textarea name="conteudo" id="conteudo" rows="4" placeholder="Escreva aqui..." required></textarea>
+        </div>
+
+        <button type="submit">Salvar</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <script>
+    function abrirModalCriar() {
+      document.getElementById("modalTitulo").textContent = "Nova Entrada";
+      document.getElementById("modo").value = "novo";
+      document.getElementById("entrada_id").value = "";
+      document.getElementById("tipo").value = "";
+      document.getElementById("titulo").value = "";
+      document.getElementById("conteudo").value = "";
+      document.getElementById("modalEntrada").style.display = "block";
+    }
+
+    function abrirModalEditar(id, tipo, titulo, conteudo) {
+      document.getElementById("modalTitulo").textContent = "Editar Entrada";
+      document.getElementById("modo").value = "editar";
+      document.getElementById("entrada_id").value = id;
+      document.getElementById("tipo").value = tipo;
+      document.getElementById("titulo").value = titulo;
+      document.getElementById("conteudo").value = conteudo;
+      document.getElementById("modalEntrada").style.display = "block";
+    }
+
+    function fecharModal() {
+      document.getElementById("modalEntrada").style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById("modalEntrada");
+      if (event.target === modal) {
+        fecharModal();
+      }
+    }
+  </script>
+
+</body>
+</html>
