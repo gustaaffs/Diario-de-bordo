@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
 from django.utils import timezone
-from .models import EntradaDiario, AuditoriaEntrada
+from .models import EntradaDiario, AuditoriaEntrada, Categoria
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 
@@ -19,11 +19,14 @@ def diario_view(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return redirect('login')
+
         modo = request.POST.get('modo')
-        tipo = request.POST.get('tipo')
+        tipo_id = request.POST.get('categoria')  # Recebe ID do select
         titulo = request.POST.get('titulo')
         conteudo = request.POST.get('conteudo')
         entrada_id = request.POST.get('entrada_id')
+
+        tipo = get_object_or_404(Categoria, id=tipo_id)
 
         if modo == 'novo':
             entrada = EntradaDiario.objects.create(
@@ -38,22 +41,19 @@ def diario_view(request):
         elif modo == 'editar' and entrada_id:
             entrada = get_object_or_404(EntradaDiario, id=entrada_id)
 
-            # Guardar valores antigos
             antes = {
-                'tipo': entrada.tipo,
+                'tipo': entrada.tipo.nome if entrada.tipo else '',
                 'titulo': entrada.titulo,
                 'conteudo': entrada.conteudo
             }
 
-            # Atualizar com valores do formulário
             entrada.tipo = tipo
             entrada.titulo = titulo
             entrada.conteudo = conteudo
             entrada.save()
 
-            # Comparar valores
             depois = {
-                'tipo': entrada.tipo,
+                'tipo': entrada.tipo.nome if entrada.tipo else '',
                 'titulo': entrada.titulo,
                 'conteudo': entrada.conteudo
             }
@@ -68,10 +68,13 @@ def diario_view(request):
 
         return redirect('diario')
 
-    # GET - Busca de entradas
+    # GET
     query = request.GET.get('q')
     data = request.GET.get('data')
-    entradas = EntradaDiario.objects.all()
+    categoria_id = request.GET.get('categoria')
+
+    entradas = EntradaDiario.objects.select_related('tipo', 'autor').all()
+    categorias = Categoria.objects.all()
 
     if query:
         entradas = entradas.filter(Q(titulo__icontains=query) | Q(conteudo__icontains=query))
@@ -79,14 +82,24 @@ def diario_view(request):
     if data:
         entradas = entradas.filter(data_criacao__date=data)
 
-    return render(request, 'diario/index.html', {'entradas': entradas})
+    if categoria_id:
+        entradas = entradas.filter(tipo__id=categoria_id)
+
+    return render(request, 'diario/index.html', {
+        'entradas': entradas,
+        'categorias': categorias,
+        'categoria_selecionada': categoria_id
+    })
 
 
 def editar_entrada(request, entrada_id):
     entrada = get_object_or_404(EntradaDiario, id=entrada_id)
 
     if request.method == 'POST':
-        entrada.tipo = request.POST.get('tipo')
+        tipo_id = request.POST.get('categoria')
+        tipo = get_object_or_404(Categoria, id=tipo_id)
+
+        entrada.tipo = tipo
         entrada.titulo = request.POST.get('titulo')
         entrada.conteudo = request.POST.get('conteudo')
         entrada.save()

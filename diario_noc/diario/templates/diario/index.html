@@ -109,7 +109,6 @@
       font-size: 0.8rem;
     }
 
-    /* Modal */
     .modal {
       display: none;
       position: fixed;
@@ -187,6 +186,12 @@
       <form method="get" class="search-form">
         <input type="text" name="q" placeholder="Buscar..." value="{{ request.GET.q }}">
         <input type="date" name="data" value="{{ request.GET.data }}">
+        <select name="categoria" id="categoriaFiltro">
+          <option value="">Todas as categorias</option>
+          {% for categoria in categorias %}
+          <option value="{{ categoria.id }}" {% if request.GET.categoria == categoria.id|stringformat:"s" %}selected{% endif %}>{{ categoria.nome }}</option>
+          {% endfor %}
+        </select>
         <button type="submit" class="btn-topbar">Buscar</button>
       </form>
 
@@ -211,11 +216,11 @@
       <div class="entrada">
         {% if user.is_authenticated %}
           <button class="btn-editar"
-                  onclick="abrirModalEditar({{ entrada.id }}, '{{ entrada.tipo }}', `{{ entrada.titulo|escapejs }}`, `{{ entrada.conteudo|escapejs }}`)">
+                  onclick="abrirModalEditar({{ entrada.id }}, `{{ entrada.categoria.id }}`, `{{ entrada.titulo|escapejs }}`, `{{ entrada.conteudo|escapejs }}`)">
             Editar
           </button>
         {% endif %}
-        <div class="data">{{ entrada.data_criacao|date:"d/m/Y H:i" }} - {{ entrada.get_tipo_display }}</div>
+        <div class="data">{{ entrada.data_criacao|date:"d/m/Y H:i" }} - {{ entrada.tipo.nome }}</div>
         <h3>{{ entrada.titulo }}</h3>
         <p>{{ entrada.conteudo|linebreaks }}</p>
         <div class="autor">Escrito por: {{ entrada.autor.get_full_name|default:entrada.autor.username }}</div>
@@ -226,7 +231,6 @@
   </div>
 
   {% if user.is_authenticated %}
-  <!-- Modal Único -->
   <div id="modalEntrada" class="modal">
     <div class="modal-content">
       <span class="close" onclick="fecharModal()">&times;</span>
@@ -237,11 +241,11 @@
         <input type="hidden" name="entrada_id" id="entrada_id">
 
         <div class="form-group">
-          <select name="tipo" id="tipo" required>
-            <option value="">Selecione o tipo</option>
-            <option value="incidente">Incidente Zabbix</option>
-            <option value="ronda">Ronda</option>
-            <option value="nota">Nota Importante</option>
+          <select name="categoria" id="categoriaSelect" required>
+            <option value="">Selecione a categoria</option>
+            {% for categoria in categorias %}
+            <option value="{{ categoria.id }}">{{ categoria.nome }}</option>
+            {% endfor %}
           </select>
         </div>
 
@@ -264,17 +268,17 @@
       document.getElementById("modalTitulo").textContent = "Nova Entrada";
       document.getElementById("modo").value = "novo";
       document.getElementById("entrada_id").value = "";
-      document.getElementById("tipo").value = "";
+      document.getElementById("categoriaSelect").value = "";
       document.getElementById("titulo").value = "";
       document.getElementById("conteudo").value = "";
       document.getElementById("modalEntrada").style.display = "block";
     }
 
-    function abrirModalEditar(id, tipo, titulo, conteudo) {
+    function abrirModalEditar(id, categoria, titulo, conteudo) {
       document.getElementById("modalTitulo").textContent = "Editar Entrada";
       document.getElementById("modo").value = "editar";
       document.getElementById("entrada_id").value = id;
-      document.getElementById("tipo").value = tipo;
+      document.getElementById("categoriaSelect").value = categoria;
       document.getElementById("titulo").value = titulo;
       document.getElementById("conteudo").value = conteudo;
       document.getElementById("modalEntrada").style.display = "block";
@@ -291,6 +295,5 @@
       }
     }
   </script>
-
 </body>
 </html>
